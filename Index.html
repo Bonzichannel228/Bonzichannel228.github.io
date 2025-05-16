@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bonziclicker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #8E374D;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #logo {
+            max-width: 150px;
+            margin-bottom: 15px;
+        }
+        #clicker {
+            width: 150px;
+            height: 150px;
+            margin: 20px auto;
+            cursor: pointer;
+            border-radius: 50%;
+            background-color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            user-select: none;
+            transition: transform 0.1s;
+            background-image: url('https://i.postimg.cc/RhZVgcZG/384-20250516042254.png');
+            background-size: cover;
+        }
+        #clicker:active {
+            transform: scale(0.95);
+        }
+        .skins {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .skin {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #ddd;
+            background-size: cover;
+        }
+        .skin.selected {
+            border-color: #4CAF50;
+        }
+        #shop-button {
+            padding: 8px 16px;
+            background-color: #7E2B40;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        #shop {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            z-index: 100;
+            width: 90%;
+            max-width: 400px;
+        }
+        .upgrade {
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #AC3E43;
+            border-radius: 5px;
+        }
+        .buy-button {
+            padding: 5px 10px;
+            background-color: #7E2B40;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color:#AC3E43 rgba(0,0,0,0.5);
+            z-index: 50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img id="logo" src="https://i.postimg.cc/cLyGHRGj/382-20250516040750.png" alt="Лого">
+        
+        <div id="score">Троянов: 0</div>
+        <div id="clicker"></div>
+        
+        <div class="skins">
+            <div class="skin selected" style="background-image: url('https://i.postimg.cc/RhZVgcZG/384-20250516042254.png')"></div>
+            <div class="skin" style="background-image: url('https://i.postimg.cc/SNKJdpXq/384-20250516042138.png')"></div>
+            <div class="skin" style="background-image: url('https://i.postimg.cc/pdKTrWSQ/384-20250516042219.png')"></div>
+        </div>
+        
+        <button id="shop-button">ШОП</button>
+    </div>
+
+    <div id="overlay"></div>
+    
+    <div id="shop">
+        <h2>ШОП</h2>
+        <div class="upgrade">
+            <h3>Удвоение кликов</h3>
+            <p>+1 к клику</p>
+            <p>Цена: 50</p>
+            <button class="buy-button" onclick="buyUpgrade('power')">Купить</button>
+        </div>
+        
+        <div class="upgrade">
+            <h3>Автокликер</h3>
+            <p>1 клик в секунду</p>
+            <p>Цена: 100</p>
+            <button class="buy-button" onclick="buyUpgrade('auto')">Купить</button>
+        </div>
+        
+        <div class="upgrade">
+            <h3>Скин "Айки"</h3>
+            <p>Эксклюзивный скин</p>
+            <p>Цена: 150</p>
+            <button class="buy-button" onclick="buyUpgrade('skin')">Купить</button>
+        </div>
+        
+        <button onclick="closeShop()" style="margin-top: 10px;">Закрыть</button>
+    </div>
+
+    <script>
+        // Игровые переменные
+        let score = 0;
+        let power = 1;
+        let autoClicker = 0;
+        let hasCustomSkin = false;
+        let autoInterval;
+        
+        // Элементы
+        const clicker = document.getElementById('clicker');
+        const scoreElement = document.getElementById('score');
+        const skins = document.querySelectorAll('.skin');
+        const shopButton = document.getElementById('shop-button');
+        const shop = document.getElementById('shop');
+        const overlay = document.getElementById('overlay');
+        
+        // Инициализация
+        function init() {
+            // Кликер
+            clicker.addEventListener('click', () => {
+                score += power;
+                updateScore();
+                animateClick();
+            });
+            
+            // Скины
+            skins.forEach(skin => {
+                skin.addEventListener('click', function() {
+                    selectSkin(this);
+                });
+            });
+            
+            // Магазин
+            shopButton.addEventListener('click', openShop);
+            
+            updateScore();
+        }
+        
+        // Обновление счета
+        function updateScore() {
+            scoreElement.textContent = `Очки: ${score}`;
+        }
+        
+        // Анимация клика
+        function animateClick() {
+            clicker.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                clicker.style.transform = 'scale(1)';
+            }, 100);
+        }
+        
+        // Выбор скина
+        function selectSkin(skin) {
+            skins.forEach(s => s.classList.remove('selected'));
+            skin.classList.add('selected');
+            
+            const bg = skin.style.backgroundImage;
+            clicker.style.backgroundImage = bg;
+        }
+        
+        // Магазин
+        function openShop() {
+            shop.style.display = 'block';
+            overlay.style.display = 'block';
+        }
+        
+        function closeShop() {
+            shop.style.display = 'none';
+            overlay.style.display = 'none';
+        }
+        
+        // Покупка улучшений
+        function buyUpgrade(type) {
+            let cost, canBuy = false;
+            
+            switch(type) {
+                case 'power':
+                    cost = 50;
+                    if (score >= cost) {
+                        score -= cost;
+                        power += 1;
+                        canBuy = true;
+                    }
+                    break;
+                    
+                case 'auto':
+                    cost = 100;
+                    if (score >= cost && autoClicker === 0) {
+                        score -= cost;
+                        autoClicker = 1;
+                        startAutoClicker();
+                        canBuy = true;
+                    }
+                    break;
+                    
+                case 'skin':
+                    cost = 150;
+                    if (score >= cost && !hasCustomSkin) {
+                        score -= cost;
+                        hasCustomSkin = true;
+                        addCustomSkin();
+                        canBuy = true;
+                    }
+                    break;
+            }
+            
+            if (canBuy) {
+                updateScore();
+                closeShop();
+            } else {
+                alert("Недостаточно Троянов или уже куплено!");
+            }
+        }
+        
+        // Автокликер
+        function startAutoClicker() {
+            if (autoInterval) clearInterval(autoInterval);
+            autoInterval = setInterval(() => {
+                score += power;
+                updateScore();
+            }, 1000);
+        }
+        
+        // Добавление кастомного скина
+        function addCustomSkin() {
+            const skinsDiv = document.querySelector('.skins');
+            const newSkin = document.createElement('div');
+            newSkin.className = 'skin';
+            newSkin.style.backgroundImage = "url('https://i.postimg.cc/mDGPyz96/383-20250516041741.png')";
+            skinsDiv.appendChild(newSkin);
+            
+            newSkin.addEventListener('click', function() {
+                selectSkin(this);
+            });
+        }
+        
+        // Запуск игры
+        init();
+    </script>
+</body>
+</html>
