@@ -111,6 +111,10 @@
             background-color:#AC3E43 rgba(0,0,0,0.5);
             z-index: 50;
         }
+        .upgrade-info {
+            font-size: 12px;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -135,15 +139,17 @@
         <h2>ШОП</h2>
         <div class="upgrade">
             <h3>Удвоение кликов</h3>
-            <p>+1 к клику</p>
-            <p>Цена: 50</p>
+            <p>+1 к клику (текущий уровень: <span id="power-level">1</span>)</p>
+            <p>Цена: <span id="power-price">50</span></p>
+            <div class="upgrade-info">Каждый уровень увеличивает стоимость на 50%</div>
             <button class="buy-button" onclick="buyUpgrade('power')">Купить</button>
         </div>
         
         <div class="upgrade">
             <h3>Автокликер</h3>
-            <p>1 клик в секунду</p>
-            <p>Цена: 100</p>
+            <p><span id="auto-level">0</span> кликов в секунду</p>
+            <p>Цена: <span id="auto-price">100</span></p>
+            <div class="upgrade-info">Каждый уровень увеличивает скорость и стоимость на 100%</div>
             <button class="buy-button" onclick="buyUpgrade('auto')">Купить</button>
         </div>
         
@@ -161,7 +167,11 @@
         // Игровые переменные
         let score = 0;
         let power = 1;
+        let powerLevel = 1;
+        let powerPrice = 50;
         let autoClicker = 0;
+        let autoLevel = 0;
+        let autoPrice = 100;
         let hasCustomSkin = false;
         let autoInterval;
         
@@ -173,13 +183,58 @@
         const shop = document.getElementById('shop');
         const overlay = document.getElementById('overlay');
         
+        // Загрузка сохранений
+        function loadGame() {
+            const savedData = localStorage.getItem('bonziClickerSave');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                score = data.score || 0;
+                power = data.power || 1;
+                powerLevel = data.powerLevel || 1;
+                powerPrice = data.powerPrice || 50;
+                autoClicker = data.autoClicker || 0;
+                autoLevel = data.autoLevel || 0;
+                autoPrice = data.autoPrice || 100;
+                hasCustomSkin = data.hasCustomSkin || false;
+                
+                updateShopUI();
+                updateScore();
+                
+                if (autoClicker > 0) {
+                    startAutoClicker();
+                }
+                
+                if (hasCustomSkin) {
+                    addCustomSkin();
+                }
+            }
+        }
+        
+        // Сохранение игры
+        function saveGame() {
+            const data = {
+                score,
+                power,
+                powerLevel,
+                powerPrice,
+                autoClicker,
+                autoLevel,
+                autoPrice,
+                hasCustomSkin
+            };
+            localStorage.setItem('bonziClickerSave', JSON.stringify(data));
+        }
+        
         // Инициализация
         function init() {
+            loadGame();
+            
             // Кликер
             clicker.addEventListener('click', () => {
                 score += power;
                 updateScore();
                 animateClick();
+                saveGame();
             });
             
             // Скины
@@ -192,12 +247,21 @@
             // Магазин
             shopButton.addEventListener('click', openShop);
             
-            updateScore();
+            // Автосохранение каждые 10 секунд
+            setInterval(saveGame, 10000);
         }
         
         // Обновление счета
         function updateScore() {
-            scoreElement.textContent = `Очки: ${score}`;
+            scoreElement.textContent = `Троянов: ${score}`;
+        }
+        
+        // Обновление UI магазина
+        function updateShopUI() {
+            document.getElementById('power-level').textContent = powerLevel;
+            document.getElementById('power-price').textContent = powerPrice;
+            document.getElementById('auto-level').textContent = autoClicker;
+            document.getElementById('auto-price').textContent = autoPrice;
         }
         
         // Анимация клика
@@ -234,21 +298,27 @@
             
             switch(type) {
                 case 'power':
-                    cost = 50;
+                    cost = powerPrice;
                     if (score >= cost) {
                         score -= cost;
                         power += 1;
+                        powerLevel += 1;
+                        powerPrice = Math.floor(powerPrice * 1.5);
                         canBuy = true;
+                        updateShopUI();
                     }
                     break;
                     
                 case 'auto':
-                    cost = 100;
-                    if (score >= cost && autoClicker === 0) {
+                    cost = autoPrice;
+                    if (score >= cost) {
                         score -= cost;
-                        autoClicker = 1;
-                        startAutoClicker();
+                        autoClicker += 1;
+                        autoLevel += 1;
+                        autoPrice = Math.floor(autoPrice * 2);
                         canBuy = true;
+                        updateShopUI();
+                        startAutoClicker();
                     }
                     break;
                     
@@ -265,6 +335,7 @@
             
             if (canBuy) {
                 updateScore();
+                saveGame();
                 closeShop();
             } else {
                 alert("Недостаточно Троянов или уже куплено!");
@@ -275,8 +346,9 @@
         function startAutoClicker() {
             if (autoInterval) clearInterval(autoInterval);
             autoInterval = setInterval(() => {
-                score += power;
+                score += power * autoClicker;
                 updateScore();
+                saveGame();
             }, 1000);
         }
         
@@ -297,4 +369,4 @@
         init();
     </script>
 </body>
-</html>
+            </html>
